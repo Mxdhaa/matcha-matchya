@@ -1,60 +1,257 @@
 <!doctype html>
-ul{line-height:1.6}
-</style>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>AI Resume Evaluator</title>
+
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide icons -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <style>
+    /* optional: smooth circle anim */
+    .stroke-anim { transition: stroke-dashoffset 1s ease; }
+  </style>
 </head>
-<body>
-<header>
-<h1>💚 Matcha‑Matchya</h1>
-<span class="muted">Resume ↔ JD matcher</span>
-</header>
+<body class="min-h-screen" style="background:linear-gradient(135deg,#fce7f3 0%,#f3e8ff 30%,#dcfce7 100%)">
 
+  <!-- animated blobs -->
+  <div class="fixed inset-0 overflow-hidden pointer-events-none">
+    <div class="absolute -top-4 -right-4 w-72 h-72 bg-pink-200 rounded-full mix-blend-multiply blur-xl opacity-40 animate-pulse"></div>
+    <div class="absolute -bottom-8 -left-4 w-72 h-72 bg-green-200 rounded-full mix-blend-multiply blur-xl opacity-40 animate-pulse [animation-delay:1s]"></div>
+    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 bg-purple-200 rounded-full mix-blend-multiply blur-xl opacity-30 animate-pulse [animation-delay:.5s]"></div>
+  </div>
 
-<div class="card">
-<div class="row">
-<input id="resume" type="file" accept="application/pdf,image/*" />
-<button id="btnEval">Evaluate</button>
-</div>
-<p class="muted">Upload your resume (PDF or image). Paste JD below.</p>
-<textarea id="jd" placeholder="Paste Job Description here..."></textarea>
-</div>
+  <main class="relative z-10 max-w-6xl mx-auto p-6">
+    <!-- Header -->
+    <div class="text-center mb-12">
+      <div class="flex justify-center items-center gap-3 mb-4">
+        <i data-lucide="brain" class="w-12 h-12 text-purple-500"></i>
+        <h1 class="text-5xl font-bold bg-gradient-to-r from-purple-500 via-pink-400 to-green-500 bg-clip-text text-transparent">AI Resume Evaluator</h1>
+        <i data-lucide="sparkles" class="w-12 h-12 text-pink-400"></i>
+      </div>
+      <p class="text-xl text-gray-600 font-medium">Advanced AI-powered resume analysis for the future of hiring</p>
+    </div>
 
+    <div class="grid lg:grid-cols-2 gap-8">
+      <!-- Left panel -->
+      <div class="space-y-6">
+        <!-- Upload -->
+        <section class="bg-white/30 backdrop-blur-lg rounded-3xl p-8 border border-white/40 shadow-2xl">
+          <h2 class="text-2xl font-bold text-gray-700 mb-6 flex items-center gap-2">
+            <i data-lucide="file-text" class="w-6 h-6 text-purple-500"></i> Resume Upload
+          </h2>
+          <div id="dropZone" class="border-2 border-dashed border-purple-300 rounded-2xl p-8 text-center cursor-pointer hover:border-pink-400 transition-all bg-white/20 hover:bg-white/30">
+            <i data-lucide="upload" class="w-16 h-16 mx-auto text-purple-400 mb-4"></i>
+            <p id="fileName" class="text-lg font-medium text-gray-600 mb-2">Drop your resume here or click to upload</p>
+            <p class="text-sm text-gray-500">Supports PDF and image formats</p>
+            <input id="fileInput" type="file" accept=".pdf,image/*" class="hidden" />
+          </div>
+        </section>
 
-<div class="card" id="out" hidden>
-<div>Overall Score: <span class="score" id="overall"></span></div>
-<pre id="scores"></pre>
-<h3>Matched Skills</h3>
-<ul id="matched"></ul>
-<h3>Missing Skills</h3>
-<ul id="missing"></ul>
-<h3>Suggestions</h3>
-<ul id="suggest"></ul>
-<h3>LLM Suggestions</h3>
-<pre id="llm"></pre>
-</div>
+        <!-- JD -->
+        <section class="bg-white/30 backdrop-blur-lg rounded-3xl p-8 border border-white/40 shadow-2xl">
+          <h2 class="text-2xl font-bold text-gray-700 mb-6 flex items-center gap-2">
+            <i data-lucide="target" class="w-6 h-6 text-green-500"></i> Job Requirements
+          </h2>
+          <textarea id="jd" class="w-full h-32 p-4 rounded-xl bg-white/60 border border-white/40 focus:outline-none focus:ring-2 focus:ring-purple-400 text-gray-700 placeholder-gray-400" placeholder="Enter the job description here..."></textarea>
+          <button id="evaluateBtn" disabled class="w-full mt-6 py-4 px-6 bg-gradient-to-r from-purple-400 to-pink-400 text-white font-bold text-lg rounded-xl disabled:opacity-50 disabled:cursor-not-allowed shadow-lg transition hover:from-purple-500 hover:to-pink-500">
+            Evaluate Resume
+          </button>
+          <div id="spinner" class="hidden mt-3 flex items-center justify-center gap-2 text-gray-700">
+            <span class="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-700 inline-block"></span> Analyzing Resume...
+          </div>
+        </section>
+      </div>
 
+      <!-- Right panel -->
+      <div id="resultsPanel" class="space-y-6 hidden">
+        <!-- Score -->
+        <section class="bg-white/30 backdrop-blur-lg rounded-3xl p-8 border border-white/40 shadow-2xl">
+          <h2 class="text-2xl font-bold text-gray-700 mb-6 flex items-center gap-2">
+            <i data-lucide="trending-up" class="w-6 h-6 text-green-500"></i> Match Score
+          </h2>
+          <div class="text-center">
+            <div class="relative inline-block">
+              <svg class="-rotate-90 w-32 h-32" viewBox="0 0 128 128">
+                <circle cx="64" cy="64" r="56" stroke="currentColor" stroke-width="8" fill="none" class="text-gray-300"></circle>
+                <circle id="scoreArc" cx="64" cy="64" r="56" stroke="currentColor" stroke-width="8" fill="none" class="text-green-500 stroke-anim" />
+              </svg>
+              <div class="absolute inset-0 flex items-center justify-center">
+                <span id="scoreText" class="text-3xl font-bold text-gray-700">0%</span>
+              </div>
+            </div>
+            <p class="text-lg font-medium text-gray-600 mt-4">Compatibility Score</p>
+          </div>
+        </section>
 
-<script>
-const btn = document.getElementById('btnEval');
-btn.onclick = async () => {
-const file = document.getElementById('resume').files[0];
-const jd = document.getElementById('jd').value;
-if (!file || !jd) { alert('Select resume and paste JD'); return; }
-const fd = new FormData();
-fd.append('file', file);
-fd.append('jd_text', jd);
-const res = await fetch('/match', { method: 'POST', body: fd });
-const data = await res.json();
-document.getElementById('overall').textContent = data.score_overall + '%';
-document.getElementById('scores').textContent = JSON.stringify(data.scores, null, 2);
-const m = document.getElementById('matched'); m.innerHTML='';
-data.matched_skills.forEach(s=>{ const li=document.createElement('li'); li.textContent=s; m.appendChild(li); });
-const mi = document.getElementById('missing'); mi.innerHTML='';
-data.missing_skills.forEach(s=>{ const li=document.createElement('li'); li.textContent=s; mi.appendChild(li); });
-const sg = document.getElementById('suggest'); sg.innerHTML='';
-data.suggestions.forEach(s=>{ const li=document.createElement('li'); li.textContent=s; sg.appendChild(li); });
-document.getElementById('llm').textContent = data.llm_suggestions || '(LLM suggestions disabled)';
-document.getElementById('out').hidden = false;
-};
-</script>
+        <!-- Skills -->
+        <section class="bg-white/30 backdrop-blur-lg rounded-3xl p-8 border border-white/40 shadow-2xl">
+          <h2 class="text-2xl font-bold text-gray-700 mb-6">Skills Analysis</h2>
+
+          <div class="space-y-6">
+            <div>
+              <div class="flex items-center gap-2 mb-3">
+                <i data-lucide="check-circle" class="w-5 h-5 text-green-500"></i>
+                <h3 class="text-lg font-semibold text-gray-700">Matched Skills</h3>
+              </div>
+              <div id="matchedSkills" class="flex flex-wrap"></div>
+            </div>
+
+            <div>
+              <div class="flex items-center gap-2 mb-3">
+                <i data-lucide="x-circle" class="w-5 h-5 text-red-500"></i>
+                <h3 class="text-lg font-semibold text-gray-700">Missing Skills</h3>
+              </div>
+              <div id="missingSkills" class="flex flex-wrap"></div>
+            </div>
+
+            <div>
+              <div class="flex items-center gap-2 mb-3">
+                <i data-lucide="sparkles" class="w-5 h-5 text-purple-500"></i>
+                <h3 class="text-lg font-semibold text-gray-700">Additional Skills</h3>
+              </div>
+              <div id="extraSkills" class="flex flex-wrap max-h-32 overflow-y-auto"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Recommendations -->
+        <section class="bg-white/30 backdrop-blur-lg rounded-3xl p-8 border border-white/40 shadow-2xl">
+          <h2 class="text-2xl font-bold text-gray-700 mb-6">AI Recommendations</h2>
+          <div id="improvements" class="space-y-4"></div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // init icons
+    document.addEventListener('DOMContentLoaded', () => lucide.createIcons());
+
+    // State (vanilla)
+    let file = null;
+    let isAnalyzing = false;
+    let results = {
+      similarity: 0,
+      matchedSkills: [],
+      missingSkills: [],
+      extraSkills: [],
+      improvements: []
+    };
+
+    // Elements
+    const fileInput = document.getElementById('fileInput');
+    const dropZone = document.getElementById('dropZone');
+    const fileName = document.getElementById('fileName');
+    const jd = document.getElementById('jd');
+    const evaluateBtn = document.getElementById('evaluateBtn');
+    const spinner = document.getElementById('spinner');
+    const resultsPanel = document.getElementById('resultsPanel');
+    const scoreArc = document.getElementById('scoreArc');
+    const scoreText = document.getElementById('scoreText');
+    const matchedBox = document.getElementById('matchedSkills');
+    const missingBox = document.getElementById('missingSkills');
+    const extraBox   = document.getElementById('extraSkills');
+    const improvsBox = document.getElementById('improvements');
+
+    // Helpers
+    const CIRC = 2 * Math.PI * 56;
+
+    function renderBadges(container, arr, type) {
+      const colorClass = {
+        matched: 'bg-gradient-to-r from-green-400 to-emerald-500 text-white',
+        missing: 'bg-gradient-to-r from-red-400 to-pink-500 text-white',
+        extra:   'bg-gradient-to-r from-purple-400 to-indigo-500 text-white'
+      }[type];
+
+      container.innerHTML = '';
+      arr.forEach(s => {
+        const span = document.createElement('span');
+        span.className = `inline-block px-3 py-1 rounded-full text-xs font-medium m-1 ${colorClass} backdrop-blur-sm shadow-lg`;
+        span.textContent = s;
+        container.appendChild(span);
+      });
+    }
+
+    function renderResults() {
+      // score circle
+      scoreArc.setAttribute('stroke-dasharray', CIRC);
+      scoreArc.setAttribute('stroke-dashoffset', CIRC * (1 - results.similarity / 100));
+      scoreText.textContent = `${results.similarity}%`;
+
+      renderBadges(matchedBox, results.matchedSkills, 'matched');
+      renderBadges(missingBox, results.missingSkills, 'missing');
+      renderBadges(extraBox,   results.extraSkills,   'extra');
+
+      improvsBox.innerHTML = '';
+      results.improvements.forEach(t => {
+        const card = document.createElement('div');
+        card.className = 'bg-white/40 rounded-xl p-4 border border-white/30';
+        card.innerHTML = `<p class="text-gray-700 font-medium">${t}</p>`;
+        improvsBox.appendChild(card);
+      });
+
+      resultsPanel.classList.remove('hidden');
+      lucide.createIcons(); // refresh icons if needed
+    }
+
+    // Upload interactions
+    dropZone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (e) => {
+      const f = e.target.files[0];
+      if (f) {
+        file = f;
+        fileName.textContent = f.name;
+        evaluateBtn.disabled = false;
+        resultsPanel.classList.add('hidden'); // hide previous
+      }
+    });
+    // Drag & drop (optional)
+    ;['dragenter','dragover'].forEach(evt =>
+      dropZone.addEventListener(evt, e => { e.preventDefault(); dropZone.classList.add('ring-2','ring-pink-300'); }));
+    ;['dragleave','drop'].forEach(evt =>
+      dropZone.addEventListener(evt, e => { e.preventDefault(); dropZone.classList.remove('ring-2','ring-pink-300'); }));
+    dropZone.addEventListener('drop', e => {
+      const f = e.dataTransfer.files?.[0];
+      if (f) {
+        file = f;
+        fileName.textContent = f.name;
+        evaluateBtn.disabled = false;
+        resultsPanel.classList.add('hidden');
+      }
+    });
+
+    // Evaluate (mock; replace with real logic)
+    evaluateBtn.addEventListener('click', async () => {
+      if (!file || isAnalyzing) return;
+      isAnalyzing = true;
+      spinner.classList.remove('hidden');
+      evaluateBtn.disabled = true;
+
+      // TODO: replace with real parsing/analysis using file & jd.value
+      await new Promise(r => setTimeout(r, 3000));
+      results = {
+        similarity: 78.1,
+        matchedSkills: ['pytorch','tensorflow'],
+        missingSkills: ['github actions','scikit-learn'],
+        extraSkills: [
+          'c++','css','git','html','hugging face','java','javascript','llm',
+          'mongodb','next.js','nlp','node.js','numpy','pandas','postgresql',
+          'python','react','sql','tailwind','transformers','typescript'
+        ],
+        improvements: [
+          'github actions: Add CI badge; steps: lint/test/build/deploy.',
+          'scikit-learn: Baseline model with ROC-AUC/F1 + CV.'
+        ]
+      };
+
+      renderResults();
+      spinner.classList.add('hidden');
+      evaluateBtn.disabled = false;
+      isAnalyzing = false;
+    });
+  </script>
 </body>
 </html>
