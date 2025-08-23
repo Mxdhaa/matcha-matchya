@@ -1,0 +1,4 @@
+// vercel.json (at repo root)
+{
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+}
