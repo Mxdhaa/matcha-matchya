@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pkl
+
+# Virtual envs
+.venv/
+env/
+ENV/
+venv/
+
+# OS / IDE junk
+.DS_Store
+Thumbs.db
+*.swp
+
+# Logs
+*.log
+
+# Frontend
+node_modules/
+.next/
+dist/
+build/
+
+# Env files
+.env

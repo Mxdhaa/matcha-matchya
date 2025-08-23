@@ -1,0 +1,60 @@
+<!doctype html>
+ul{line-height:1.6}
+</style>
+</head>
+<body>
+<header>
+<h1>💚 Matcha‑Matchya</h1>
+<span class="muted">Resume ↔ JD matcher</span>
+</header>
+
+
+<div class="card">
+<div class="row">
+<input id="resume" type="file" accept="application/pdf,image/*" />
+<button id="btnEval">Evaluate</button>
+</div>
+<p class="muted">Upload your resume (PDF or image). Paste JD below.</p>
+<textarea id="jd" placeholder="Paste Job Description here..."></textarea>
+</div>
+
+
+<div class="card" id="out" hidden>
+<div>Overall Score: <span class="score" id="overall"></span></div>
+<pre id="scores"></pre>
+<h3>Matched Skills</h3>
+<ul id="matched"></ul>
+<h3>Missing Skills</h3>
+<ul id="missing"></ul>
+<h3>Suggestions</h3>
+<ul id="suggest"></ul>
+<h3>LLM Suggestions</h3>
+<pre id="llm"></pre>
+</div>
+
+
+<script>
+const btn = document.getElementById('btnEval');
+btn.onclick = async () => {
+const file = document.getElementById('resume').files[0];
+const jd = document.getElementById('jd').value;
+if (!file || !jd) { alert('Select resume and paste JD'); return; }
+const fd = new FormData();
+fd.append('file', file);
+fd.append('jd_text', jd);
+const res = await fetch('/match', { method: 'POST', body: fd });
+const data = await res.json();
+document.getElementById('overall').textContent = data.score_overall + '%';
+document.getElementById('scores').textContent = JSON.stringify(data.scores, null, 2);
+const m = document.getElementById('matched'); m.innerHTML='';
+data.matched_skills.forEach(s=>{ const li=document.createElement('li'); li.textContent=s; m.appendChild(li); });
+const mi = document.getElementById('missing'); mi.innerHTML='';
+data.missing_skills.forEach(s=>{ const li=document.createElement('li'); li.textContent=s; mi.appendChild(li); });
+const sg = document.getElementById('suggest'); sg.innerHTML='';
+data.suggestions.forEach(s=>{ const li=document.createElement('li'); li.textContent=s; sg.appendChild(li); });
+document.getElementById('llm').textContent = data.llm_suggestions || '(LLM suggestions disabled)';
+document.getElementById('out').hidden = false;
+};
+</script>
+</body>
+</html>
